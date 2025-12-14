@@ -1,0 +1,276 @@
+---
+title: "Summative Assessment 2"
+author: "Pineda, Erianne L."
+subtitle: APM1111 Statistical Theory
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+library(car)
+library(ggplot2)
+library(rstatix)
+library(dplyr)
+```
+
+---
+
+\begin{center}
+\textit{GitHub Link:} \\
+\url{https://github.com/ehriyan/APM1111_StatTheory.git}
+\end{center}
+
+---
+
+# Dataset
+
+```{r}
+data <- data.frame(
+  AD_Status = factor(c(rep(1, 20), rep(2, 20)), labels = c("Transgenic", "Wild Type")),
+  Treatment = factor(rep(c(rep(1, 5), rep(2, 5), rep(3, 5), rep(4, 5)), 2)),
+  Training = c(
+    12, 15, 13, 12, 14,  
+    15, 17, 16, 17, 14,  
+    13, 14, 18, 15, 16,  
+    14, 13, 12, 14, 15,  
+    17, 16, 17, 14, 13,  
+    14, 18, 16, 17, 14,  
+    13, 14, 18, 15, 16,  
+    14, 13, 12, 14, 15   
+  ),
+  Memory = c(
+    10, 12, 13, 10, 13,  
+    13, 13, 14, 15, 11,  
+    12, 11, 15, 10, 14,  
+    12, 11, 10, 13, 10,  
+    9, 8, 10, 8, 8,      
+    7, 10, 5, 9, 7,      
+    8, 7, 9, 8, 9,       
+    7, 9, 5, 8, 4        
+  )
+)
+
+kable(data, caption = "Alzheimer's Mice Dataset")
+```
+
+# Problem
+Mice are used in an experiment to test drugs that may prevent Alzheimer’s disease. Half the mice are transgenic – have been genetically modified to have Alzheimer’s disease. The other half of the mice are “wild type” – they have not been modified in any way, and are considered free of Alzheimer’s disease. The mice are assigned to treatment conditions and given one of four drugs, then tested on memory using a maze. The number of errors made in the maze is recorded for the Training Day and the Memory Day.
+
+
+# Assumptions
+
+### Assumption #1: \textnormal{Your dependent variable should be measured at the continuous level (i.e., they are interval or ratio variables).}
+
+### Assumption #2: \textnormal{Your two independent variables should each consist of two or more categorical, independent groups.}
+
+### Assumption #3: \textnormal{You should have independence of observations, which means that there is no relationship between the observations in each group or between the groups themselves.}
+
+### Assumption #4: \textnormal{There should be no significant outliers.}
+
+### Assumption #5: \textnormal{Your dependent variable should be approximately normally distributed for each combination of the groups of the two independent variables.}
+
+### Assumption #6. \textnormal{There needs to be homogeneity of variances for each combination of the groups of the two independent variables.}
+
+
+# Hypotheses
+
+## A. Main Effect of AD Status
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Null Hypothesis $(H_0)$:** There is no significant difference in the mean memory errors between the Transgenic and Wild Type mice.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Alternative Hypothesis $(H_A)$:** There is a significant difference in the mean memory errors between the Transgenic and Wild Type mice.
+
+## B. Main Effect of Treatment
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Null Hypothesis $(H_0)$:** There is no significant difference in the mean memory errors across the four drug treatment groups.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Alternative Hypothesis $(H_A)$:** At least one drug treatment group has a significantly different mean memory error.
+
+## C. Interaction Effect Between AD Status and Treatment
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Null Hypothesis $(H_0)$:** There is no significant interaction effect on memory error between AD status and treatment group.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Alternative Hypothesis $(H_A)$:** There is a significant interaction effect on memory error between AD status and treatment group.
+
+# Checking of Assumptions
+
+### Assumption #1: \textnormal{Your dependent variable should be measured at the continuous level (i.e., they are interval or ratio variables).}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Remark**: The dependent variable, memory errors, is measured at the continuous level.
+
+### Assumption #2: \textnormal{Your two independent variables should each consist of two or more categorical, independent groups.}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Remark**: The two independent variables, Alzheimer’s disease (AD Status) and Treatment, each consist of two or more categorical, independent groups.
+
+### Assumption #3: \textnormal{You should have independence of observations, which means that there is no relationship between the observations in each group or between the groups themselves.}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Remark**: The samples are independent of one another, where there is no relationship between the observations in each group of the independent variable or between the groups themselves.
+
+### Assumption #4: \textnormal{There should be no significant outliers.}
+
+```{r}
+ggplot(data, aes(x = Treatment, y = Memory, fill = AD_Status)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.5) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2), size = 2, alpha = 0.7) +
+  
+  labs(
+    title = "Boxplot of Memory Errors by Treatment and AD Status",
+    x = "Treatment",
+    y = "Errors",
+    fill = "AD Status"  
+  ) +
+  
+  theme_minimal() +
+  scale_fill_manual(values = c("#007E6E", "#D34E4E")) # Changed from 'scale_color_manual' 
+```
+
+**Remark**: There are no significant outliers as assessed by visual inspection of the boxplot.
+
+### Assumption #5: \textnormal{Your dependent variable should be approximately normally distributed for each combination of the groups of the two independent variables.}
+
+```{r}
+shapiro_results <- data %>%
+  group_by(AD_Status, Treatment) %>%
+  summarise(
+    W = round(shapiro.test(Memory)$statistic, 3),
+    p = round(shapiro.test(Memory)$p.value, 3),
+    .groups = 'drop'
+  )
+
+kable(shapiro_results, caption = "Shapiro–Wilk Test of Normality")
+```
+
+**Remark**: The dependent variable, memory error, is approximately normally distributed for each combination of the groups of AD Status and Treatment, as assessed by Shapiro-Wilk test of normality, (p > 0.05).
+
+
+### Assumption #6. \textnormal{There needs to be homogeneity of variances for each combination of the groups of the two independent variables.}
+
+```{r}
+levene_result <- leveneTest(Memory ~ AD_Status * Treatment, data = data)
+
+kable(levene_result, caption = "Levene's Test for Homogeneity of Variance")
+```
+
+**Remark**: The variances for each combination of the groups of AD Status and Treatment are homogeneous, as assessed by Levene’s test of equality of variances, (p = 0.572).
+
+# Computation
+
+## Descriptive Statistics
+
+```{r}
+descriptives <- data %>%
+  group_by(AD_Status, Treatment) %>%
+  summarise(
+    Mean = round(mean(Memory), 2),
+    SD = round(sd(Memory), 2),
+    N = n(),
+    .groups = 'drop'
+  )
+
+kable(descriptives, caption = "Descriptive Statistics")
+```
+
+
+## Two-Way ANOVA
+
+```{r}
+training_anova <- data %>% 
+  anova_test(Training ~ Treatment * AD_Status, effect.size = "pes")
+
+kable(training_anova, 
+      caption = "Two-Way ANOVA Results: Training Day Errors",
+      digits = 3)
+```
+
+**Remark**: There was no statistically significant interaction between AD Status and Treatment on Training day errors, $F(3, 32) = 1.22, p = .320$. Therefore, the main effects were examined.
+There was a statistically significant main effect of Treatment, $F(3, 32) = 3.79, p = .020$. However, the main effect of AD Status was not statistically significant, $F(1, 32) = 1.22, p = .278$.
+
+
+```{r}
+memory_anova <- data %>% 
+  anova_test(Memory ~ Treatment * AD_Status, effect.size = "pes")
+
+kable(memory_anova, 
+      caption = "Two-Way ANOVA Results: Memory Day Errors",
+      digits = 3)
+```
+
+**Remark**: There was no statistically significant interaction between AD Status and Treatment on Memory day errors, $F(3, 32) = 1.15, p = .343$. Therefore, the main effects were examined.
+There was a statistically significant main effect of AD Status, $F(1, 32) = 75.31, p < .001$. However, the main effect of Treatment was not statistically significant, $F(3, 32) = 1.92, p = .146$.
+
+
+## Post hoc Analysis
+
+```{r}
+post_hoc_training <- data %>%
+  pairwise_t_test(
+    Training ~ Treatment, 
+    p.adjust.method = "bonferroni"
+  )
+
+kable(post_hoc_training, 
+      caption = "Treatment Main Effect (Training Errors)",
+      digits = 3)
+```
+
+
+```{r}
+desc_training <- data %>%
+  group_by(Treatment) %>%
+  get_summary_stats(Training, type = "mean_sd")
+
+kable(desc_training, 
+      caption = "Descriptives - Training Errors by Treatment",
+      digits = 2)
+
+desc_memory <- data %>%
+  group_by(AD_Status) %>%
+  get_summary_stats(Memory, type = "mean_sd")
+
+kable(desc_memory, 
+      caption = "Descriptives - Memory Errors by AD Status",
+      digits = 2)
+```
+
+```{r}
+ggplot(data, aes(x = AD_Status, y = Memory, fill = AD_Status)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.5) +
+  geom_jitter(width = 0.2, size = 2, alpha = 0.7) +
+  labs(
+    title = "Main Effect of AD Status on Memory Errors",
+    x = "AD Status",
+    y = "Memory Errors"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("#D34E4E", "#007E6E")) +
+  theme(legend.position = "none") 
+
+ggplot(data, aes(x = Treatment, y = Training, fill = Treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.5) +
+  geom_jitter(width = 0.2, size = 2, alpha = 0.7) +
+  labs(
+    title = "Main Effect of Treatment on Training Errors",
+    x = "Treatment",
+    y = "Training Errors"
+  ) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set2") + 
+  theme(legend.position = "none")
+```
+
+
+# Reporting 
+
+## Reporting - Training Day Errors
+A two-way ANOVA was conducted to examine the effects of Alzheimer’s status and drug treatment on training day errors. Residual analysis was performed to test for the assumptions of the two-way ANOVA. Outliers were assessed by inspection of a boxplot, normality was assessed using Shapiro-Wilk's normality test for each cell of the design, and homogeneity of variances was assessed by Levene's test. There were no outliers, residuals were normally distributed ($p > .05$), and there was homogeneity of variances ($p > .05$).
+
+The interaction effect between Alzheimer’s status and drug treatment on training errors was not statistically significant, $F(3, 32) = 1.22, p = .320$. Thus, an analysis of the main effect for drug treatment was performed, which indicated that the main effect was statistically significant, $F(3, 32) = 3.79, p = .020$.
+
+All pairwise comparisons were run where reported 95% confidence intervals and p-values are Bonferroni-adjusted. The unweighted marginal means of "Training Errors" for Treatment 1, Treatment 2, Treatment 3, and Treatment 4 were $14.30$, $15.80$, $15.20$, and $13.60$, respectively. Treatment 2 was associated with a mean error score significantly higher than Treatment 4 ($p < .05$), indicating that the drug treatment type significantly influenced the performance of the mice.
+
+## Reporting - Memory Day Errors
+A two-way ANOVA was conducted to examine the effects of Alzheimer’s status and drug treatment on memory day errors. Residual analysis was performed to test for the assumptions of the two-way ANOVA. Outliers were assessed by inspection of a boxplot, normality was assessed using Shapiro-Wilk's normality test for each cell of the design, and homogeneity of variances was assessed by Levene's test. There were no outliers, residuals were normally distributed ($p > .05$), and there was homogeneity of variances ($p > .05$).
+
+The interaction effect between Alzheimer’s status and drug treatment on memory errors was not statistically significant, $F(3, 32) = 1.15, p = .344$. Thus, an analysis of the main effect for Alzheimer’s status was performed, which indicated that the main effect was statistically significant, $F(1, 32) = 75.31, p < .001$.
+
+The unweighted marginal means of "Memory Errors" for Transgenic and Wild Type mice were $12.10$ and $7.75$, respectively. The Transgenic status was associated with a mean "Memory Error" score $4.35$ points higher than the Wild Type status, a statistically significant difference, $p < .001$.
+
+
+
+
